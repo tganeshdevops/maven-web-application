@@ -1,0 +1,28 @@
+node{
+def mhd = tool name: "maven"
+properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '', daysToKeepStr: '', numToKeepStr: '5')), pipelineTriggers([pollSCM('* * * * *')])])
+stage('CheckOutCode'){
+git branch: 'development', credentialsId: 'git_with_token', url: 'https://github.com/tganeshdevops/maven-web-application.git'
+}
+stage('Build'){
+sh "${mhd}/bin/mvn clean package"
+}
+stage('BuildSonarQubeReport'){
+sh "${mhd}/bin/mvn sonar:sonar"
+}
+stage('CreateNexusArtifact'){
+sh "${mhd}/bin/mvn clean deploy"
+}
+stage('DeployAppintoTomcatServer'){
+sshagent(['ab30cf11-425f-4f09-9bef-dd252b913625']) {
+    sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war ubuntu@43.204.102.43:/opt/tomcat/webapps/"
+}
+}
+/*stage('SendEmailNotification'){
+mail bcc: '', body: '''Build is done successfully
+
+Regards
+Ganesh technologies''', cc: 'ganeshtbalu@gmail.com', from: '', replyTo: '', subject: 'Build Done..', to: 'ganeshtbalu@gmail.com'
+}
+*/
+}
